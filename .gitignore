@@ -1,0 +1,8 @@
+build/
+ext/
+geo/target/
+web/attica.bin
+geo_demo/
+chatgpt_update.txt
+__pycache__/
+*.pyc

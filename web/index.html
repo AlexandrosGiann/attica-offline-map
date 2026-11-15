@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Χάρτης Αττικής</title>
+<style>
+  :root { --bg:#0e1117; --panel:#161a22; --line:#2a303c; --fg:#e8eaf0; --dim:#9aa3b2; --acc:#4fc3f7; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font:14px/1.35 "Segoe UI", Roboto, Arial, sans-serif; overflow:hidden; }
+  #map { position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; touch-action:none; display:block; }
+  #top { position:absolute; left:8px; right:8px; top:8px; background:var(--panel); border:1px solid var(--line);
+    border-radius:10px; padding:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; z-index:2; max-width:760px; }
+  .fld { position:relative; flex:1 1 200px; min-width:0; }
+  input, select, button { font:inherit; color:var(--fg); background:#0f1319; border:1px solid var(--line);
+    border-radius:7px; padding:7px 9px; width:100%; }
+  select { width:auto; } button { width:auto; cursor:pointer; background:#1f2a38; }
+  button.primary { background:#1565c0; border-color:#1e88e5; }
+  .sug { position:absolute; left:0; right:0; top:100%; background:var(--panel); border:1px solid var(--line);
+    border-radius:7px; margin-top:2px; max-height:260px; overflow:auto; display:none; z-index:5; }
+  .sug div { padding:6px 9px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .sug div:hover, .sug div.on { background:#22324a; }
+  .sug small { color:var(--dim); display:block; }
+  #panel { position:absolute; left:8px; bottom:8px; background:var(--panel); border:1px solid var(--line);
+    border-radius:10px; padding:8px 10px; z-index:2; max-width:520px; right:56px; max-height:42%; overflow:auto; }
+  #panel:empty { display:none; }
+  #panel .tot { font-weight:600; font-size:15px; margin-bottom:4px; }
+  #panel .st { padding:3px 0; border-top:1px solid var(--line); }
+  #panel .meta { color:var(--dim); font-size:12px; margin-top:4px; }
+  #zoom { position:absolute; right:8px; bottom:8px; display:flex; flex-direction:column; gap:6px; z-index:2; }
+  #zoom button { width:40px; height:40px; font-size:20px; padding:0; }
+  #load { position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    gap:10px; z-index:10; background:var(--bg); }
+  #bar { width:240px; height:6px; background:#222; border-radius:3px; overflow:hidden; }
+  #bar i { display:block; height:100%; width:0; background:var(--acc); }
+  #info { position:absolute; right:8px; top:8px; z-index:1; color:var(--dim); font-size:11px; text-align:right;
+    pointer-events:none; }
+  @media (max-width: 640px) { #info { top:auto; bottom:110px; } }
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+<div id="top">
+  <div class="fld"><input id="from" placeholder="Από (όνομα ή lat,lon)" autocomplete="off"><div class="sug" id="sfrom"></div></div>
+  <div class="fld"><input id="to" placeholder="Προς" autocomplete="off"><div class="sug" id="sto"></div></div>
+  <select id="mode">
+    <option value="car">🚗 Αυτοκίνητο</option>
+    <option value="foot">🚶 Πεζός</option>
+    <option value="bike">🚲 Ποδήλατο</option>
+    <option value="transit">🚌 ΜΜΜ</option>
+  </select>
+  <button class="primary" id="go">Διαδρομή</button>
+  <button id="pick" title="Πάτα στον χάρτη για Από και μετά για Προς">📍</button>
+  <a href="geo.html" title="Πού τραβήχτηκε μια φωτογραφία"><button type="button">📷</button></a>
+</div>
+<div id="panel"></div>
+<div id="zoom"><button id="zin">+</button><button id="zout">−</button></div>
+<div id="info"></div>
+<div id="load"><div id="ltxt">Φόρτωση χάρτη…</div><div id="bar"><i></i></div></div>
+<script src="app.js"></script>
+</body>
+</html>

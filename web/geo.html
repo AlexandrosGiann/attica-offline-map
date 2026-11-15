@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Πού είναι η φωτογραφία</title>
+<style>
+  :root { --bg:#0e1117; --panel:#161a22; --line:#2a303c; --fg:#e8eaf0; --dim:#9aa3b2; --acc:#4fc3f7; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.4 "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.sub { color:var(--dim); margin:0 0 14px; font-size:13px; }
+  label.btn { display:inline-block; background:#1565c0; border:1px solid #1e88e5; border-radius:8px; padding:10px 16px; cursor:pointer; }
+  input[type=file] { display:none; }
+  #q img { max-width:100%; max-height:300px; border-radius:8px; margin-top:12px; display:block; }
+  #st { color:var(--dim); margin:10px 0; min-height:20px; }
+  .r { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:10px 0; }
+  .r b { font-size:16px; }
+  .r small { color:var(--dim); display:block; }
+  .imgs img { height:130px; max-width:100%; border-radius:6px; margin:6px 6px 0 0; object-fit:cover; }
+  .bar { height:5px; background:#222; border-radius:3px; margin:6px 0; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--acc); }
+  a { color:var(--acc); }
+  .warn { color:#ffb74d; }
+</style>
+</head>
+<body>
+<main>
+  <h1>📷 Πού τραβήχτηκε η φωτογραφία;</h1>
+  <p class="sub">Τα 5 πιο πιθανά σημεία στην Αττική, από 2.076 εικόνες του Wikidata (MobileCLIP-S0 + Mirage). <a href="index.html">← χάρτης</a></p>
+  <label class="btn">Διάλεξε φωτογραφία<input id="f" type="file" accept="image/*"></label>
+  <div id="q"></div>
+  <div id="st"></div>
+  <div id="out"></div>
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  $("f").onchange = function () {
+    var file = this.files && this.files[0];
+    if (!file) return;
+    $("q").innerHTML = "";
+    var img = document.createElement("img");
+    img.src = (window.URL || window.webkitURL).createObjectURL(file);
+    $("q").appendChild(img);
+    $("out").innerHTML = "";
+    $("st").textContent = "Ανάλυση… (~5 s)";
+    var t = Date.now();
+    var x = new XMLHttpRequest();
+    x.open("POST", "/geo/query");
+    x.setRequestHeader("Content-Type", file.type || "image/jpeg");
+    x.onload = function () {
+      var r;
+      try { r = JSON.parse(x.responseText); } catch (e) { $("st").textContent = "Σφάλμα απάντησης"; return; }
+      if (x.status !== 200) { $("st").textContent = "Σφάλμα: " + (r.error || x.status); return; }
+      show(r, (Date.now() - t) / 1000);
+    };
+    x.onerror = function () { $("st").textContent = "Δεν απαντά ο server"; };
+    x.send(file);
+  };
+  function show(r, sec) {
+    var h = "", tm = r.timing || {};
+    var st = "Έτοιμο σε " + sec.toFixed(1) + " s (Mirage " + tm.mirage_ms + " ms, MobileCLIP " + tm.clip_ms + " ms, επαλήθευση " + tm.verify_ms + " ms).";
+    if (r.exif_gps) st += " EXIF GPS: " + r.exif_gps[0].toFixed(5) + ", " + r.exif_gps[1].toFixed(5);
+    $("st").textContent = st;
+    if (r.people_cover > 0.01) h += '<p class="' + (r.low_confidence ? "warn" : "") + '">Άνθρωποι: ' + Math.round(r.people_cover * 100) + "% της εικόνας" + (r.low_confidence ? " — χαμηλή βεβαιότητα" : "") + "</p>";
+    var sc = r.mirage && r.mirage.scene;
+    if (sc) { var a = []; for (var k in sc) a.push(k + ": " + sc[k]); h += '<p class="sub">Mirage: ' + esc(a.join(", ")) + "</p>"; }
+    if (r.ocr_tokens && r.ocr_tokens.length) h += '<p class="sub">OCR: ' + esc(r.ocr_tokens.join(" ")) + "</p>";
+    (r.results || []).forEach(function (x) {
+      var p = x.places[0], pct = Math.round(x.probability * 100);
+      h += '<div class="r"><b>' + x.rank + ". " + esc(p.el || p.en || p.q) + "</b>" +
+        "<small>" + x.lat.toFixed(5) + ", " + x.lon.toFixed(5) + " · βαθμός " + x.score + " · ~" + pct + "%" +
+        (x.gps_distance_m != null ? " · " + (x.gps_distance_m / 1000).toFixed(1) + " km από το GPS" : "") + "</small>" +
+        '<div class="bar"><i style="width:' + Math.max(2, pct) + '%"></i></div>';
+      x.places.forEach(function (q) {
+        h += "<small>" + esc(q.el) + (q.en ? " / " + esc(q.en) : "") + (q.desc ? " — " + esc(q.desc) : "") +
+          ' · <a href="https://www.wikidata.org/wiki/' + esc(q.q) + '">' + esc(q.q) + "</a></small>";
+      });
+      h += '<small><a href="https://www.openstreetmap.org/?mlat=' + x.lat + "&mlon=" + x.lon + "#map=17/" + x.lat + "/" + x.lon + '">OSM</a></small><div class="imgs">';
+      x.images.forEach(function (im) { h += '<img src="' + r.base + esc(im.file) + '" title="' + esc(im.commons) + " (cos " + im.similarity + ", inliers " + im.inliers + ')">'; });
+      h += "</div></div>";
+    });
+    $("out").innerHTML = h;
+  }
+})();
+</script>
+</body>
+</html>
